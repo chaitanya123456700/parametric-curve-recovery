@@ -224,6 +224,7 @@ alone.
 ---
 
 ## 6. Methodology — Phase by Phase
+Fig. 1 which shows the architecture diagram of the work.
 
 The final pipeline is a five-phase ICP-style loop: propose correspondence → fit transform →
 refine → polish → validate, with each phase chosen specifically to patch a limitation
