@@ -1,0 +1,59 @@
+<svg width="680" height="832" viewBox="0 0 680 832" xmlns="http://www.w3.org/2000/svg" font-family="Helvetica, Arial, sans-serif">
+<defs>
+<marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+<path d="M2 1L8 5L2 9" fill="none" stroke="#333333" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</marker>
+</defs>
+<rect x="0" y="0" width="680" height="832" fill="#ffffff"/>
+
+<!-- Input -->
+<rect x="90" y="40" width="260" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="220" y="60" text-anchor="middle" font-size="14" font-weight="600" fill="#2C2C2A">Input: xy_data.csv</text>
+<text x="220" y="80" text-anchor="middle" font-size="12" fill="#444441">1500 unordered (x,y) points</text>
+<line x1="220" y1="96" x2="220" y2="156" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Phase 1a -->
+<rect x="90" y="156" width="260" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="220" y="176" text-anchor="middle" font-size="14" font-weight="600" fill="#042C53">Phase 1a — seeding</text>
+<text x="220" y="196" text-anchor="middle" font-size="12" fill="#0C447C">Radius invariant, multi-restart</text>
+<line x1="220" y1="212" x2="220" y2="272" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Phase 1 -->
+<rect x="90" y="272" width="260" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="220" y="292" text-anchor="middle" font-size="14" font-weight="600" fill="#042C53">Phase 1 — global scout</text>
+<text x="220" y="312" text-anchor="middle" font-size="12" fill="#0C447C">DE search + RANSAC consensus</text>
+<line x1="220" y1="328" x2="220" y2="388" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Phase 2 -->
+<rect x="90" y="388" width="260" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="220" y="408" text-anchor="middle" font-size="14" font-weight="600" fill="#042C53">Phase 2 — refinement</text>
+<text x="220" y="428" text-anchor="middle" font-size="12" fill="#0C447C">TRF, huber loss</text>
+<line x1="220" y1="444" x2="220" y2="504" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Phase 3 -->
+<rect x="90" y="504" width="260" height="56" rx="8" fill="#E6F1FB" stroke="#185FA5" stroke-width="1"/>
+<text x="220" y="524" text-anchor="middle" font-size="14" font-weight="600" fill="#042C53">Phase 3 — polish</text>
+<text x="220" y="544" text-anchor="middle" font-size="12" fill="#0C447C">Nelder-Mead, strict L1</text>
+<line x1="220" y1="560" x2="220" y2="620" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Phase 4 -->
+<rect x="90" y="620" width="260" height="56" rx="8" fill="#FAEEDA" stroke="#854F0B" stroke-width="1"/>
+<text x="220" y="640" text-anchor="middle" font-size="14" font-weight="600" fill="#412402">Phase 4 — validation</text>
+<text x="220" y="660" text-anchor="middle" font-size="12" fill="#633806">Multi-seed agreement check</text>
+<text x="70" y="650" text-anchor="end" font-size="12" fill="#444441">&#8635; re-runs 1a-3,</text>
+<text x="70" y="666" text-anchor="end" font-size="12" fill="#444441">4 seeds</text>
+<line x1="220" y1="676" x2="220" y2="736" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+<!-- Output -->
+<rect x="90" y="736" width="260" height="56" rx="8" fill="#F1EFE8" stroke="#5F5E5A" stroke-width="1"/>
+<text x="220" y="756" text-anchor="middle" font-size="14" font-weight="600" fill="#2C2C2A">Output</text>
+<text x="220" y="776" text-anchor="middle" font-size="12" fill="#444441">&#952;, M, X + LaTeX equation</text>
+
+<!-- Phase 0 shared module -->
+<rect x="440" y="330" width="200" height="110" rx="8" fill="#E1F5EE" stroke="#0F6E56" stroke-width="1"/>
+<text x="540" y="360" text-anchor="middle" font-size="14" font-weight="600" fill="#04342C">Phase 0</text>
+<text x="540" y="380" text-anchor="middle" font-size="12" fill="#085041">Correspondence-free</text>
+<text x="540" y="396" text-anchor="middle" font-size="12" fill="#085041">objective (KD-tree)</text>
+<text x="540" y="416" text-anchor="middle" font-size="12" fill="#085041">called by every phase</text>
+<line x1="350" y1="385" x2="438" y2="385" stroke="#888880" stroke-width="1" stroke-dasharray="4 4"/>
+</svg>
