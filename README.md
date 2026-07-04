@@ -22,12 +22,15 @@
 
 ## 1. Objective
 
-Recover the three unknown scalar constants `(θ, M, X)` of the parametric curve
+Recover the three unknown scalar constants $(\theta, M, X)$ of the parametric curve
 
-```
-x(t) = t·cos(θ) − e^(M|t|)·sin(0.3t)·sin(θ) + X
-y(t) = 42 + t·sin(θ) + e^(M|t|)·sin(0.3t)·cos(θ)
-```
+$$
+x(t)=t\cos(\theta)-e^{M|t|}\sin(0.3t)\sin(\theta)+X
+$$
+
+$$
+y(t)=42+t\sin(\theta)+e^{M|t|}\sin(0.3t)\cos(\theta)
+$$
 
 for `t ∈ (6, 60)`, given only an **unordered, uncorrespondenced** cloud of ~1500 `(x, y)`
 samples known to lie on this curve, with bounds `θ ∈ (0°, 50°)`, `M ∈ (−0.05, 0.05)`,
