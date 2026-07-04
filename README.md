@@ -58,7 +58,7 @@ and Section 6 documents a second one discovered mid-implementation (the Phase 1a
 
 ## 2. Problem Formulation
 
-Let $u(t) = t$ and $v(t) = e^(M|t|)·sin(0.3t)$. The equations decompose exactly as:
+Let $u(t) = t$ and $v(t) = e^{M|t|}·sin(0.3t)$. The equations decompose exactly as:
 
 ```
 x = u·cosθ − v·sinθ + X
