@@ -225,7 +225,7 @@ alone.
 
 ## 6. Methodology — Phase by Phase
 Fig. 1 which shows the architecture diagram of the work.
-![Architecture](Architecture_diagram/pipeline_architecture.png)
+![Architecture](Architecture_diagram/pipeline_architecture.svg)
 
 The final pipeline is a five-phase ICP-style loop: propose correspondence → fit transform →
 refine → polish → validate, with each phase chosen specifically to patch a limitation
@@ -328,14 +328,14 @@ test data) and reflect the author's real run.
 
 ### 7.1 Fit overlay — does the curve actually pass through the data?
 
-![Fit overlay](assets/fit_overlay.png)
+![Fit overlay](Validation_Results/fit_overlay.png)
 
 The recovered curve (`θ=30.00°, M=0.0300, X=55.00`) sits directly on top of the full 1500-point
 cloud across the entire visible range, with no region of visible drift or offset.
 
 ### 7.2 Residual distribution
 
-![Residual histogram](assets/residual_histogram.png)
+![Residual histogram](Validation_Results/residual_histogram.png)
 
 Residuals (distance from each point to the fitted curve) are tightly concentrated near
 `0.002`, with mean `0.0021` and no heavy tail — consistent with a correct fit plus small
@@ -343,7 +343,7 @@ floating-point/data noise, not a fit that is systematically missing some region 
 
 ### 7.3 Residual vs. matched t — checking for systematic bias
 
-![Residual vs t](assets/residual_vs_t.png)
+![Residual vs t](Validation_Results/residual_vs_t.png)
 
 Residuals stay in the same low range across the full `t ∈ [6, 60]` domain, with no drift and
 no exact-period-count artifact from `sin(0.3t)`. A very mild density increase around
@@ -352,7 +352,7 @@ not a localized failure.
 
 ### 7.4 Convergence across phases
 
-![Phase convergence](assets/phase_convergence.png)
+![Phase convergence](Validation_Results/phase_convergence.png)
 
 True L1 cost falls monotonically and by orders of magnitude at each stage: **1.37 × 10³** (seed)
 → **10.0** (scout) → **3.08** (refined) → **3.08** (polished). Phase 2→3 shows no further
@@ -362,7 +362,7 @@ L1 optimum for this dataset/noise level — expected when residuals are small an
 
 ### 7.5 Multi-seed agreement
 
-![Multi-seed agreement](assets/multiseed_agreement.png)
+![Multi-seed agreement](Validation_Results/multiseed_agreement.png)
 
 All 4 independent full-pipeline runs (different random seeds from Phase 1a onward) converge to
 **exactly** `θ=30.00°, M=0.0300, X=55.00` — zero spread across runs. This is the strongest
@@ -370,7 +370,7 @@ evidence in this report: the result is not an artifact of one lucky seed.
 
 ### 7.6 Phase 1a diagnostic — visualizing the bug and its fix
 
-![Phase 1a diagnostic](assets/phase1a_diagnostic.png)
+![Phase 1a diagnostic](Validation_Results/phase1a_diagnostic.png)
 
 This plot is the direct visual evidence for the Section 6 bug writeup: candidates are plotted
 by *radius-space cost* (x-axis, what the flawed raw objective sees) against *true (x,y) cost*
@@ -382,7 +382,7 @@ selection-by-true-cost.
 
 ### 7.7 Independent check — Desmos
 
-![Desmos graph](assets/desmos_graph.png)
+![Desmos graph](desmos-parametric-fit-verification/desmos_plot.png)
 
 The final LaTeX equation (Section 8) was entered directly into Desmos as a parametric curve
 with `t` restricted to `[6, 60]`, as an independent rendering check outside the Python
