@@ -1,7 +1,7 @@
 # Parametric Curve Parameter Recovery from an Unordered Point Cloud
 ### Flam AI R&D Internship — Assignment Submission
 
-**Author's result:** θ = 30.000°, M = 0.030000, X = 55.000071 · self-consistency L1 = 3.079 / 1500 pts (≈0.002 mean residual/point)
+**Author's result:** $\theta = 30.000°$, $M = 0.030000$, $X = 55.000071$ · self-consistency $L_1 = 3.079$ / 1500 pts ($\approx 0.002$ mean residual/point)
 
 ---
 
@@ -32,11 +32,11 @@ $$
 y(t)=42+t\sin(\theta)+e^{M|t|}\sin(0.3t)\cos(\theta)
 $$
 
-for $t ∈ (6, 60)$, given only an **unordered, uncorrespondenced** cloud of ~1500 $(x, y)$
-samples known to lie on this curve, with bounds $θ ∈ (0°, 50°)$, $M ∈ (−0.05, 0.05)$,
-$X ∈ (0, 100)$.
+for $t \in (6, 60)$, given only an **unordered, uncorrespondenced** cloud of ~1500 $(x, y)$
+samples known to lie on this curve, with bounds $\theta \in (0°, 50°)$, $M \in (-0.05, 0.05)$,
+$X \in (0, 100)$.
 
-This is not a standard regression problem. The dataset gives no $(\t) value and no reliable
+This is not a standard regression problem. The dataset gives no $t$ value and no reliable
 row-order signal, so the central difficulty is **not** fitting a curve to $(t, x, y)$ triples —
 it's recovering a rigid transform (rotation + translation) of an unknown base shape from a
 point cloud with **unknown correspondence** between data points and curve parameter values.
@@ -45,7 +45,7 @@ Grading (as specified in the assignment) weights three components:
 
 | Criterion | Points | What it rewards |
 |---|---|---|
-| L1 distance, uniformly-sampled curve comparison | 100 | Numerical accuracy of $(θ, M, X)$ |
+| $L_1$ distance, uniformly-sampled curve comparison | 100 | Numerical accuracy of $(\theta, M, X)$ |
 | Explanation of process & reasoning | 80 | Research process — hypothesis, verification, correction — scored independent of final accuracy |
 | Code / repository quality | 50 | The mechanism, not just the number |
 
@@ -58,52 +58,62 @@ and Section 6 documents a second one discovered mid-implementation (the Phase 1a
 
 ## 2. Problem Formulation
 
-Let $u(t) = t$ and $v(t) = e^{M|t|}·sin(0.3t)$. The equations decompose exactly as:
+Let $u(t) = t$ and $v(t) = e^{M|t|}\sin(0.3t)$. The equations decompose exactly as:
 
-```
-x = u·cosθ − v·sinθ + X
-y − 42 = u·sinθ + v·cosθ
-```
+$$
+x = u\cos\theta - v\sin\theta + X
+$$
 
-which is a **2D rotation matrix** `R(θ)` applied to the point `(u, v)`, followed by a
-**translation** by `(X, 42)`:
+$$
+y - 42 = u\sin\theta + v\cos\theta
+$$
 
-```
-(x − X, y − 42) = R(θ) · (u(t), v(t))
-```
+which is a **2D rotation matrix** $R(\theta)$ applied to the point $(u, v)$, followed by a
+**translation** by $(X, 42)$:
 
-The curve is therefore: a "base shape" `(t, e^(M|t|)·sin(0.3t))` — linear drift on one axis, a
-sinusoid of amplitude decaying/growing per the sign of `M` on the other — rotated by `θ`, then
-translated so its `t = 0` point lands at `(X, 42)`. The constant `42` is simply half of the
-translation vector, with `X` as the other half.
+$$
+(x - X,\; y - 42) = R(\theta) \cdot (u(t), v(t))
+$$
+
+The curve is therefore: a "base shape" $(t,\, e^{M|t|}\sin(0.3t))$ — linear drift on one axis, a
+sinusoid of amplitude decaying/growing per the sign of $M$ on the other — rotated by $\theta$,
+then translated so its $t = 0$ point lands at $(X, 42)$. The constant $42$ is simply half of
+the translation vector, with $X$ as the other half.
 
 ### 2.1 A rotation-invariant (used for cheap seeding, Section 6)
 
 Rotation preserves distance from the origin of the un-translated point, giving:
 
-```
-(x − X)² + (y − 42)² = t² + e^(2M|t|)·sin²(0.3t)
-```
+$$
+(x - X)^2 + (y - 42)^2 = t^2 + e^{2M|t|}\sin^2(0.3t)
+$$
 
-a relation in `t` and `M` **only** — no `θ` dependence. Given a candidate `X`, this lets `M`
-(and a `t`-correspondence guess) be estimated completely independently of `θ`, collapsing a 3D
-correspondence-free search to a cheaper 2D one.
+a relation in $t$ and $M$ **only** — no $\theta$ dependence. Given a candidate $X$, this lets
+$M$ (and a $t$-correspondence guess) be estimated completely independently of $\theta$,
+collapsing a 3D correspondence-free search to a cheaper 2D one.
 
-**Caveat (kept honest):** `ρ(t) = √(t² + e^(2M|t|)sin²(0.3t))` is *not* guaranteed monotonic —
-near `M`'s upper bound and large `t`, the exponential envelope's derivative can exceed `2t`.
-Matching by radius therefore still requires a nearest-neighbor search, not a sorted lookup.
+**Caveat (kept honest):** $\rho(t) = \sqrt{t^2 + e^{2M|t|}\sin^2(0.3t)}$ is *not* guaranteed
+monotonic — near $M$'s upper bound ($0.05$) and large $t$ (close to $60$), the derivative of
+the exponential envelope term can exceed $2t$. Matching by radius therefore still requires a
+nearest-neighbor search, not a sorted lookup.
 
 ### 2.2 Closed-form θ (zero iteration needed)
 
-With `(M, X, t)` pinned down via the invariant above, `θ` follows in closed form. The rotation
-equations are a complex multiplication: `x' + i·y' = (u + i·v)·e^(iθ)`, so per point:
+With $(M, X, t)$ pinned down via the invariant above, $\theta$ follows in closed form. The
+rotation equations are a complex multiplication:
 
-```
-θᵢ = atan2(y'ᵢ, x'ᵢ) − atan2(vᵢ, uᵢ)
-```
+$$
+x' + iy' = (u + iv)\,e^{i\theta}
+$$
 
-The **median** across all matched points gives a robust `θ` estimate with no search — used as
-a seeding step (Phase 1a), not a replacement for the full fit.
+so per point:
+
+$$
+\theta_i = \operatorname{atan2}(y_i', x_i') - \operatorname{atan2}(v_i, u_i)
+$$
+
+The **median** across all matched points gives a robust $\theta$ estimate with no search — used
+as a seeding step (Phase 1a), not a replacement for the full fit.
 
 ---
 
@@ -113,17 +123,17 @@ Before any modeling, the dataset's actual structure was checked empirically rath
 assumed:
 
 - **1500 rows, two columns (`x`, `y`)** — no `t` or index column present.
-- **Row order carries no time information.** Consecutive-row `Δx` has a **67.5% sign-flip
+- **Row order carries no time information.** Consecutive-row $\Delta x$ has a **67.5% sign-flip
   rate** (a smoothly time-sampled curve flips sign only near turning points; pure noise flips
-  ~50% of the time) and a step standard deviation (~19.6) that is ~40% of the entire x-range
-  (~49.6) — a single row-to-row step is often a third of the whole curve's span. This is
-  **shuffled data**, not a time-ordered sample.
-- **Plotting `x` vs `y` with row order ignored produces a smooth, coherent curve** — confirming
+  $\approx 50\%$ of the time) and a step standard deviation ($\approx 19.6$) that is $\approx
+  40\%$ of the entire $x$-range ($\approx 49.6$) — a single row-to-row step is often a third of
+  the whole curve's span. This is **shuffled data**, not a time-ordered sample.
+- **Plotting $x$ vs $y$ with row order ignored produces a smooth, coherent curve** — confirming
   the data is genuine curve data, just not stored in temporal order.
 
 **Consequence:** the naive shortcut of reconstructing `t = linspace(6, 60, N)` and matching
 row-for-row is invalid on two independent grounds (point-count mismatch with that assumption,
-and row order not encoding `t` even where counts might coincidentally match). This reframes the
+and row order not encoding $t$ even where counts might coincidentally match). This reframes the
 task as **point-cloud-to-curve registration with unknown correspondence** — the same problem
 class as ICP in computer vision, or "orthogonal distance regression" in curve-fitting
 literature (Section 4).
@@ -156,11 +166,11 @@ many samples.
   Applications to Image Analysis and Automated Cartography." *Communications of the ACM*,
   24(6), 1981, 381–395.
 
-**Tangentially related — parametric signal estimation.** The `e^(M|t|)·sin(0.3t)` term is
+**Tangentially related — parametric signal estimation.** The term $e^{M|t|}\sin(0.3t)$ is
 structurally a damped/growing sinusoid of known frequency; classical signal-processing methods
 for estimating such parameters are thematically related, though they assume regularly-spaced
-time samples, which this dataset does not have (reinforcing why the geometric/ICP framing,
-not a signal-processing framing, is the correct one here):
+time samples, which this dataset does not have (reinforcing why the geometric/ICP framing, not
+a signal-processing framing, is the correct one here):
 - Prony, G.R. de. "Essai éxperimental..." *Journal de l'École Polytechnique*, 1795.
 - Roy, R., Paulraj, A., & Kailath, T. "ESPRIT — A subspace rotation approach to estimation of
   parameters of cisoids in noise." *IEEE Transactions on Acoustics, Speech, and Signal
@@ -179,56 +189,64 @@ trusting one triplet (Phase 1).
 
 A broad survey of optimization families was carried out before selecting the final pipeline.
 Each is evaluated on **function**, **advantages**, and — critically — **limitations specific to
-this problem** (the `sin(0.3t)` term creates a rippled, multimodal objective surface with real
+this problem** (the $\sin(0.3t)$ term creates a rippled, multimodal objective surface with real
 local minima; bounds on all three parameters are hard constraints).
 
 ### 5.1 Gradient-based local optimizers
 
 | Method | Function | Advantages | Limitations here |
 |---|---|---|---|
-| **Gradient Descent** | Steepest-descent step, fixed/adaptive rate | Trivial to implement, cheap per step, scales to any dimension | Purely local — no defense against `sin(0.3t)` local minima; slow high-precision convergence; the L1 objective's subgradient is undefined only exactly at zero residual, so it doesn't "bounce infinitely," it just loses fast convergence near the optimum |
-| **Levenberg–Marquardt (LM)** | Interpolates GD and Gauss-Newton via a damping term on `JᵀJ` | Near-quadratic convergence once close to optimum on smooth least-squares problems | **Unusable here**: `scipy.optimize.least_squares(method='lm')` supports only `loss='linear'` and **does not support bounds at all** — and θ/M/X all have hard bounds |
-| **Trust Region Reflective (TRF)** | Reflects proposed steps back into the feasible region instead of stepping outside bounds | Natively bound-constrained, numerically stable, pairs with `loss='huber'/'soft_l1'` to approximate L1 | Still a local method — same periodicity risk as GD/LM; L1-approximation quality depends on tuning `f_scale` |
+| **Gradient Descent** | Steepest-descent step, fixed/adaptive rate | Trivial to implement, cheap per step, scales to any dimension | Purely local — no defense against $\sin(0.3t)$ local minima; slow high-precision convergence; the $L_1$ objective's subgradient is undefined only exactly at zero residual, so it doesn't "bounce infinitely," it just loses fast convergence near the optimum |
+| **Levenberg–Marquardt (LM)** | Interpolates GD and Gauss-Newton via a damping term on $J^\top J$ | Near-quadratic convergence once close to optimum on smooth least-squares problems | **Unusable here**: `scipy.optimize.least_squares(method='lm')` supports only `loss='linear'` and **does not support bounds at all** — and $\theta, M, X$ all have hard bounds |
+| **Trust Region Reflective (TRF)** | Reflects proposed steps back into the feasible region instead of stepping outside bounds | Natively bound-constrained, numerically stable, pairs with `loss='huber'/'soft_l1'` to approximate $L_1$ | Still a local method — same periodicity risk as GD/LM; $L_1$-approximation quality depends on tuning `f_scale` |
 
 ### 5.2 Derivative-free local optimizers
 
 | Method | Function | Advantages | Limitations here |
 |---|---|---|---|
-| **Nelder-Mead** | Simplex reflection/expansion/contraction/shrink | Fully derivative-free — optimizes the *true* L1 objective with no smoothing; well-suited to 3 parameters | Local-minima trap remains; simplex can degenerate/stall without restart; no convergence guarantee on non-convex objectives in general |
-| **Powell's Method** | Cycles through coordinate directions, then updates search directions based on net movement each cycle (not plain "lock two, vary one") | Derivative-free; direction updating makes it more efficient than naive coordinate descent when parameters are coupled (θ is coupled to M/X via sin/cos/exp terms) | Every 1D line search along any direction still crosses the same `sin(0.3t)`-driven ripples |
+| **Nelder-Mead** | Simplex reflection/expansion/contraction/shrink | Fully derivative-free — optimizes the *true* $L_1$ objective with no smoothing; well-suited to 3 parameters | Local-minima trap remains; simplex can degenerate/stall without restart; no convergence guarantee on non-convex objectives in general |
+| **Powell's Method** | Cycles through coordinate directions, then updates search directions based on net movement each cycle (not plain "lock two, vary one") | Derivative-free; direction updating makes it more efficient than naive coordinate descent when parameters are coupled ($\theta$ is coupled to $M, X$ via $\sin$/$\cos$/$\exp$ terms) | Every 1D line search along any direction still crosses the same $\sin(0.3t)$-driven ripples |
 
 ### 5.3 Global explorers
 
 | Method | Function | Advantages | Limitations here |
 |---|---|---|---|
 | **Grid Search** | Exhaustive sampling over a parameter lattice | Deterministic, trivially parallelizable, useful as a landscape-mapping diagnostic | Curse of dimensionality; each evaluation itself costs a KD-tree correspondence pass over 1500 points, so cost grows on two axes simultaneously |
-| **Differential Evolution (DE)** | Population-based; mutation combines random population members via a vector difference `x_r1 + F·(x_r2 − x_r3)` | Gradient-free (works directly with the non-smooth KD-tree objective), strong exploration/diversity, natively bound-supporting | Inefficient for millimeter-level final precision — a Scout, not a finisher; stochastic, so different runs can land differently (the actual reason to multi-seed it) |
+| **Differential Evolution (DE)** | Population-based; mutation combines random population members via a vector difference $x_{r1} + F(x_{r2} - x_{r3})$ | Gradient-free (works directly with the non-smooth KD-tree objective), strong exploration/diversity, natively bound-supporting | Inefficient for millimeter-level final precision — a Scout, not a finisher; stochastic, so different runs can land differently (the actual reason to multi-seed it) |
 | **Particle Swarm Optimization (PSO)** | Particles share positional info directly, often converges faster than DE on moderately multimodal problems | Gradient-free | Prone to premature convergence; sensitive to inertia-weight/velocity tuning on a landscape this rippled |
 
 ### 5.4 Deep learning approaches
 
 | Method | Function | Advantages | Limitations here |
 |---|---|---|---|
-| **Standard Neural Networks (MLP/CNN)** | Learn a direct mapping from point-cloud features to `(θ,M,X)` | Instant inference after training — amortizes cost if solving many such fits repeatedly | CNNs assume grid-structured input (images), which an unordered point cloud is not; a plain MLP also implicitly assumes a meaningful fixed input order, which this data lacks — the architecture that genuinely fits unordered sets is permutation-invariant (PointNet-style). Massive engineering overhead disproportionate to a one-off 3-parameter fit, even though 100k+ synthetic training examples could cheaply be generated from the known generative equation |
-| **Physics-Informed Neural Networks (PINNs)** | Learn a solution field with an autodiff-based PDE residual as loss; an *inverse PINN* variant jointly learns unknown constants | Genuinely valuable when the governing relationship is a differential equation with sparse/noisy data | This equation is closed-form algebraic (`t → x,y` directly) — there is no differential structure for PINN's core mechanism to exploit, so it's computationally unnecessary here; also fiddly to train (balancing data loss vs. physics loss) with no corresponding benefit |
+| **Standard Neural Networks (MLP/CNN)** | Learn a direct mapping from point-cloud features to $(\theta, M, X)$ | Instant inference after training — amortizes cost if solving many such fits repeatedly | CNNs assume grid-structured input (images), which an unordered point cloud is not; a plain MLP also implicitly assumes a meaningful fixed input order, which this data lacks — the architecture that genuinely fits unordered sets is permutation-invariant (PointNet-style). Massive engineering overhead disproportionate to a one-off 3-parameter fit, even though 100k+ synthetic training examples could cheaply be generated from the known generative equation |
+| **Physics-Informed Neural Networks (PINNs)** | Learn a solution field with an autodiff-based PDE residual as loss; an *inverse PINN* variant jointly learns unknown constants | Genuinely valuable when the governing relationship is a differential equation with sparse/noisy data | This equation is closed-form algebraic ($t \to x, y$ directly) — there is no differential structure for PINN's core mechanism to exploit, so it's computationally unnecessary here; also fiddly to train (balancing data loss vs. physics loss) with no corresponding benefit |
 
 ### 5.5 Algebraic root-finding
 
 | Method | Function | Advantages | Limitations here |
 |---|---|---|---|
-| **Newton–Raphson on sampled points** | With `t` unknown per point, 3 `(x,y)` points give **6 equations** for **6 unknowns** (`θ,M,X,t₁,t₂,t₃`) — not "3 equations for 3 unknowns" as a naive count suggests | Fast (locally quadratic) if it converges; touches only the sampled points | Converges only *locally* — needs a good initial guess, and `sin(0.3t)` creates multiple nearby plausible roots, so a poor guess converges confidently to the wrong answer; highly noise-sensitive on a single triplet |
+| **Newton–Raphson on sampled points** | With $t$ unknown per point, 3 $(x,y)$ points give **6 equations** for **6 unknowns** ($\theta, M, X, t_1, t_2, t_3$) — not "3 equations for 3 unknowns" as a naive count suggests | Fast (locally quadratic) if it converges; touches only the sampled points | Converges only *locally* — needs a good initial guess, and $\sin(0.3t)$ creates multiple nearby plausible roots, so a poor guess converges confidently to the wrong answer; highly noise-sensitive on a single triplet |
 
 **The throughline:** smooth gradient-based solvers formally minimize a *smoothed surrogate*
-near the L1 objective's non-differentiable point at zero residual — not literally the L1
+near the $L_1$ objective's non-differentiable point at zero residual — not literally the $L_1$
 target — which is exactly why the pipeline below hands off from a smooth surrogate (Phase 2)
-to a derivative-free method for the final strict-L1 snap (Phase 3), rather than using either
+to a derivative-free method for the final strict-$L_1$ snap (Phase 3), rather than using either
 alone.
 
 ---
 
 ## 6. Methodology — Phase by Phase
-Fig. 1 which shows the architecture diagram of the work.
+
+Fig. 1 shows the architecture diagram of the pipeline.
+
 ![Architecture](Architecture_diagram/pipeline_architecture.svg)
+
+**Fig. 1.** Pipeline architecture. Sequential stages (blue) progressively refine
+$(\theta, M, X)$; Phase 4 (amber) re-runs the full 1a→3 chain across 4 independent seeds rather
+than being a one-shot check. Phase 0 (teal) is not a pipeline stage but a shared, stateless
+objective function — every phase calls it fresh on its own current parameter estimate, which is
+what makes the pipeline correspondence-free end to end (Section 3).
 
 The final pipeline is a five-phase ICP-style loop: propose correspondence → fit transform →
 refine → polish → validate, with each phase chosen specifically to patch a limitation
@@ -237,9 +255,9 @@ identified in Section 5.
 ### Phase 0 — Correspondence-Free Objective (`common.py`)
 
 **What it does:** Defines the core model `curve_xy(t, θ, M, X)` and the objective every later
-phase calls: for a candidate `(θ, M, X)`, draw the theoretical curve densely (8000 points over
-`t ∈ [6, 60]`), build a KD-tree over it, and for each of the 1500 data points compute distance
-to its nearest point on that curve.
+phase calls: for a candidate $(\theta, M, X)$, draw the theoretical curve densely (8000 points
+over $t \in [6, 60]$), build a KD-tree over it, and for each of the 1500 data points compute
+distance to its nearest point on that curve.
 
 **Limitation it solves:** This is the actual fix for the Section 3 finding. Because
 correspondence is **derived fresh from whatever parameters are currently being tested** — never
@@ -249,30 +267,32 @@ applied to an unordered cloud with a parametric (not point-set) model.
 
 ### Phase 1a — Rotation-Invariant Seeding (`phase1a_seed.py`)
 
-**What it does:** Uses the Section 2.1 invariant `(x−X)² + (y−42)² = t² + e^(2M|t|)sin²(0.3t)`
-to search a cheap 2D `(M, X)` space instead of the full 3D space, then recovers `θ` in closed
-form (Section 2.2) with zero additional iteration.
+**What it does:** Uses the Section 2.1 invariant
+$(x-X)^2 + (y-42)^2 = t^2 + e^{2M|t|}\sin^2(0.3t)$
+to search a cheap 2D $(M, X)$ space instead of the full 3D space, then recovers $\theta$ in
+closed form (Section 2.2) with zero additional iteration.
 
 **Limitation it solves — and a bug found and fixed mid-implementation:**
-A first version of this phase, run against true parameters `θ=23.7°, M=0.021, X=41.3`, returned
-`θ=50°, M≈−0.0005, X=82.6` — clearly wrong. This was **not a coding bug** but a real failure mode
-of radius-only matching:
+A first version of this phase, run against true parameters $\theta=23.7°, M=0.021, X=41.3$,
+returned $\theta=50°, M\approx-0.0005, X=82.6$ — clearly wrong. This was **not a coding bug**
+but a real failure mode of radius-only matching:
 
-> As `M → 0`, `ρ_theory(t) ≈ t` — the theoretical radius curve degenerates into an almost-
-> perfect ramp covering the *entire* `[6, 60]` range. Once that happens, nearly any `X` that
-> pushes the data's radii into roughly that range finds a spuriously good nearest-neighbor
-> match in radius space, because the ramp is dense enough to match almost anything. A single
-> global search over the radius objective reliably rediscovers this degenerate basin — it
-> genuinely *is* that objective's global optimum — so re-running the same global search doesn't
-> produce diversity.
+> As $M \to 0$, $\rho_{\text{theory}}(t) \approx t$ — the theoretical radius curve degenerates
+> into an almost-perfect ramp covering the *entire* $[6, 60]$ range. Once that happens, nearly
+> any $X$ that pushes the data's radii into roughly that range finds a spuriously good
+> nearest-neighbor match in radius space, because the ramp is dense enough to match almost
+> anything. A single global search over the radius objective reliably rediscovers this
+> degenerate basin — it genuinely *is* that objective's global optimum — so re-running the same
+> global search doesn't produce diversity.
 
 **The fix** has two parts, both implemented in `phase1a_seed.py`:
 1. **Diverse candidate generation** — one global DE pass (kept for comparison) plus several
-   *local* (Nelder-Mead) restarts launched from scattered starting points across the `(M, X)`
-   box, including points deliberately away from `M ≈ 0`. A local method started in a different
-   basin stays there instead of being pulled into the one global radius-space optimum.
+   *local* (Nelder-Mead) restarts launched from scattered starting points across the $(M, X)$
+   box, including points deliberately away from $M \approx 0$. A local method started in a
+   different basin stays there instead of being pulled into the one global radius-space
+   optimum.
 2. **Grounded selection** — every candidate is scored by the **real Phase 0 objective**
-   (nearest-point-on-curve distance in `(x,y)` space), never by radius-space cost. A candidate
+   (nearest-point-on-curve distance in $(x,y)$ space), never by radius-space cost. A candidate
    that only "cheats" the radius check shows a visibly bad true cost once actually compared
    against the data (see the diagnostic plot, Section 7).
 
@@ -282,8 +302,8 @@ the selection criterion was the bug, not the invariant itself.
 
 ### Phase 1 — Global Scout (`phase1_scout.py`)
 
-**What it does:** Runs differential evolution over the full `(θ, M, X)` box, with part of the
-initial population seeded near Phase 1a's estimate and the rest random, on a coarser `t`-grid
+**What it does:** Runs differential evolution over the full $(\theta, M, X)$ box, with part of
+the initial population seeded near Phase 1a's estimate and the rest random, on a coarser $t$-grid
 for speed. In parallel, runs a RANSAC-style consensus search: repeatedly sample a small subset
 of points, propose a candidate fit, and score it by counting how many of the **full** 1500
 points it explains (using Phase 0's exact residual).
@@ -296,31 +316,31 @@ stochastic variability by running both a seeded and a cold-started search and co
 ### Phase 2 — Smooth Local Refinement (`phase2_refine.py`)
 
 **What it does:** `scipy.optimize.least_squares` with `method='trf'`, `loss='huber'`, bound-
-constrained to the assignment's `(θ,M,X)` ranges.
+constrained to the assignment's $(\theta, M, X)$ ranges.
 
 **Limitation it solves:** Avoids the LM disqualification from Section 5.1 (no bounds support)
-while getting fast, smooth convergence toward the true L1 optimum via a differentiable
+while getting fast, smooth convergence toward the true $L_1$ optimum via a differentiable
 surrogate.
 
 ### Phase 3 — Strict L1 Polish (`phase3_polish.py`)
 
-**What it does:** Nelder-Mead directly on the true (non-smoothed) L1 objective, starting from
-Phase 2's result, with an optional restart of the simplex to guard against stalling.
+**What it does:** Nelder-Mead directly on the true (non-smoothed) $L_1$ objective, starting
+from Phase 2's result, with an optional restart of the simplex to guard against stalling.
 
-**Limitation it solves:** Phase 2's huber loss is a smooth *surrogate* for L1 — this phase
+**Limitation it solves:** Phase 2's huber loss is a smooth *surrogate* for $L_1$ — this phase
 removes the smoothing bias and optimizes the actual grading metric directly, which a
 derivative-free method can do exactly because it needs no gradient.
 
 ### Phase 4 — Validation (`phase4_validate.py`)
 
 **What it does:** Re-runs the entire Phase 1a → 1 → 2 → 3 chain from 4 independent random
-seeds, checks agreement across runs, and cross-checks Phase 1a's independent
-radius-based estimate against the final answer.
+seeds, checks agreement across runs, and cross-checks Phase 1a's independent radius-based
+estimate against the final answer.
 
 **Limitation it solves:** No single run, however good its own residual looks, proves it isn't
-sitting in one of `sin(0.3t)`'s local minima. Multi-seed agreement and a second,
-differently-derived estimate (Phase 1a) agreeing with the final result are the two
-independent lines of evidence this problem allows without knowing the true parameters.
+sitting in one of $\sin(0.3t)$'s local minima. Multi-seed agreement and a second,
+differently-derived estimate (Phase 1a) agreeing with the final result are the two independent
+lines of evidence this problem allows without knowing the true parameters.
 
 ---
 
@@ -333,68 +353,76 @@ test data) and reflect the author's real run.
 
 ![Fit overlay](Validation_Results/fit_overlay.png)
 
-The recovered curve (`θ=30.00°, M=0.0300, X=55.00`) sits directly on top of the full 1500-point
-cloud across the entire visible range, with no region of visible drift or offset.
+**Fig. 2.** Fit overlay — recovered curve ($\theta=30.00°$, $M=0.0300$, $X=55.00$) plotted
+directly on top of the full 1500-point cloud. The curve sits on the cloud across the entire
+visible range, with no region of visible drift or offset.
 
 ### 7.2 Residual distribution
 
 ![Residual histogram](Validation_Results/residual_histogram.png)
 
-Residuals (distance from each point to the fitted curve) are tightly concentrated near
-`0.002`, with mean `0.0021` and no heavy tail — consistent with a correct fit plus small
-floating-point/data noise, not a fit that is systematically missing some region of the data.
+**Fig. 3.** Residual distribution — distance from each data point to the fitted curve.
+Residuals are tightly concentrated near $0.002$, with mean $0.0021$ and no heavy tail —
+consistent with a correct fit plus small floating-point/data noise, not a fit that is
+systematically missing some region of the data.
 
 ### 7.3 Residual vs. matched t — checking for systematic bias
 
 ![Residual vs t](Validation_Results/residual_vs_t.png)
 
-Residuals stay in the same low range across the full `t ∈ [6, 60]` domain, with no drift and
-no exact-period-count artifact from `sin(0.3t)`. A very mild density increase around
-`t ≈ 50–55` is visible but stays within the same order of magnitude as the rest of the range —
-not a localized failure.
+**Fig. 4.** Residual vs. matched $t$. Residuals stay in the same low range across the full
+$t \in [6, 60]$ domain, with no drift and no exact-period-count artifact from $\sin(0.3t)$. A
+very mild density increase around $t \approx 50$–$55$ is visible but stays within the same
+order of magnitude as the rest of the range — not a localized failure.
 
 ### 7.4 Convergence across phases
 
 ![Phase convergence](Validation_Results/phase_convergence.png)
 
-True L1 cost falls monotonically and by orders of magnitude at each stage: **1.37 × 10³** (seed)
-→ **10.0** (scout) → **3.08** (refined) → **3.08** (polished). Phase 2→3 shows no further
-improvement here, indicating Phase 2's huber-smoothed optimum already coincided with the true
-L1 optimum for this dataset/noise level — expected when residuals are small and evenly spread
-(consistent with 7.2/7.3), since huber and L1 losses converge for small residuals.
+**Fig. 5.** True $L_1$ cost across pipeline phases, falling monotonically and by orders of
+magnitude at each stage: $1.37 \times 10^3$ (seed) → $10.0$ (scout) → $3.08$ (refined) → $3.08$
+(polished). Phase 2→3 shows no further improvement here, indicating Phase 2's huber-smoothed
+optimum already coincided with the true $L_1$ optimum for this dataset/noise level — expected
+when residuals are small and evenly spread (consistent with Figs. 3–4), since huber and $L_1$
+losses converge for small residuals.
 
 ### 7.5 Multi-seed agreement
 
 ![Multi-seed agreement](Validation_Results/multiseed_agreement.png)
 
-All 4 independent full-pipeline runs (different random seeds from Phase 1a onward) converge to
-**exactly** `θ=30.00°, M=0.0300, X=55.00` — zero spread across runs. This is the strongest
+**Fig. 6.** Final $(\theta, M, X)$ estimate across 4 independent full-pipeline runs (different
+random seeds from Phase 1a onward). All 4 runs converge to **exactly**
+$\theta=30.00°$, $M=0.0300$, $X=55.00$ — zero spread across runs. This is the strongest
 evidence in this report: the result is not an artifact of one lucky seed.
 
 ### 7.6 Phase 1a diagnostic — visualizing the bug and its fix
 
 ![Phase 1a diagnostic](Validation_Results/phase1a_diagnostic.png)
 
-This plot is the direct visual evidence for the Section 6 bug writeup: candidates are plotted
-by *radius-space cost* (x-axis, what the flawed raw objective sees) against *true (x,y) cost*
-(y-axis, log scale, what actually matters). The selected candidate (red star) does **not** have
-the lowest radius cost — several gray candidates with lower radius cost have dramatically
-*higher* true cost. This is exactly the degenerate-basin failure mode described in Section 6,
-demonstrated rather than just asserted, and it's why selection-by-radius-cost was replaced with
-selection-by-true-cost.
+**Fig. 7.** Phase 1a candidates plotted by radius-space cost (x-axis, what the flawed raw
+objective sees) against true $(x,y)$ cost (y-axis, log scale, what actually matters). This is
+the direct visual evidence for the Section 6 bug writeup: the selected candidate (red star)
+does **not** have the lowest radius cost — several gray candidates with lower radius cost have
+dramatically *higher* true cost. This is exactly the degenerate-basin failure mode described in
+Section 6, demonstrated rather than just asserted, and it's why selection-by-radius-cost was
+replaced with selection-by-true-cost.
 
 ### 7.7 Independent check — Desmos
 
 ![Desmos graph](desmos-parametric-fit-verification/desmos_plot.png)
 
-The final LaTeX equation (Section 8) was entered directly into Desmos as a parametric curve
-with `t` restricted to `[6, 60]`, as an independent rendering check outside the Python
+**Fig. 8.** Independent rendering check. The final LaTeX equation (Section 8) was entered
+directly into Desmos as a parametric curve with $t$ restricted to $[6, 60]$, outside the Python
 pipeline entirely. The resulting shape — a shallow rising drift with two visible oscillation
-bumps — is consistent with the fitted curve shown in Section 7.1.
+bumps — is consistent with the fitted curve shown in Fig. 2.
 
 ---
 
 ## 8. Final Answer
+
+The recovered parameters are $\theta = 0.523599\text{ rad} = 30.000°$, $M = 0.030000$,
+$X = 55.000071$, with self-consistency $L_1 = 3.079$ over 1500 points ($\approx 0.0021$ mean
+residual per point), and multi-seed spread $= 0$ across $\theta$, $M$, and $X$ (Fig. 6).
 
 ```
 theta = 0.523599 rad  (30.000 deg)
@@ -410,9 +438,9 @@ multi-seed agreement: YES (spread = 0.000 across theta, M, X)
 x(t) = t\cos(0.523599) - e^{0.030000|t|}\sin(0.3t)\sin(0.523599) + 55.000071, \quad y(t) = 42 + t\sin(0.523599) + e^{0.030000|t|}\sin(0.3t)\cos(0.523599)
 ```
 
-Both `θ` and `M` recovered to clean, near-round values (`30.000°`, `0.030000`), and `X` to
-within `0.0001` of a round value — consistent with a synthetic dataset generated from round
-ground-truth parameters, and further evidence (beyond Sections 7.4–7.5) that this is the correct
+Both $\theta$ and $M$ recovered to clean, near-round values ($30.000°$, $0.030000$), and $X$ to
+within $0.0001$ of a round value — consistent with a synthetic dataset generated from round
+ground-truth parameters, and further evidence (beyond Figs. 5–6) that this is the correct
 solution rather than a well-fitting local minimum.
 
 ---
