@@ -109,7 +109,7 @@ $$
 so per point:
 
 $$
-\theta_i = \operatorname{atan2}(y_i', x_i') - \operatorname{atan2}(v_i, u_i)
+\theta_i = \mathrm{atan2}(y_i', x_i') - \mathrm{atan2}(v_i, u_i)
 $$
 
 The **median** across all matched points gives a robust $\theta$ estimate with no search — used
