@@ -32,12 +32,12 @@ $$
 y(t)=42+t\sin(\theta)+e^{M|t|}\sin(0.3t)\cos(\theta)
 $$
 
-for $(\t ∈ (6, 60)$, given only an **unordered, uncorrespondenced** cloud of ~1500 $(\(x, y)$
-samples known to lie on this curve, with bounds $(\θ ∈ (0°, 50°)$, $(\M ∈ (−0.05, 0.05)$,
-$(\X ∈ (0, 100)$.
+for $t ∈ (6, 60)$, given only an **unordered, uncorrespondenced** cloud of ~1500 $(x, y)$
+samples known to lie on this curve, with bounds $θ ∈ (0°, 50°)$, $M ∈ (−0.05, 0.05)$,
+$X ∈ (0, 100)$.
 
 This is not a standard regression problem. The dataset gives no $(\t) value and no reliable
-row-order signal, so the central difficulty is **not** fitting a curve to $(\(t, x, y)$ triples —
+row-order signal, so the central difficulty is **not** fitting a curve to $(t, x, y)$ triples —
 it's recovering a rigid transform (rotation + translation) of an unknown base shape from a
 point cloud with **unknown correspondence** between data points and curve parameter values.
 
@@ -45,7 +45,7 @@ Grading (as specified in the assignment) weights three components:
 
 | Criterion | Points | What it rewards |
 |---|---|---|
-| L1 distance, uniformly-sampled curve comparison | 100 | Numerical accuracy of $(\(θ, M, X)$ |
+| L1 distance, uniformly-sampled curve comparison | 100 | Numerical accuracy of $(θ, M, X)$ |
 | Explanation of process & reasoning | 80 | Research process — hypothesis, verification, correction — scored independent of final accuracy |
 | Code / repository quality | 50 | The mechanism, not just the number |
 
@@ -58,7 +58,7 @@ and Section 6 documents a second one discovered mid-implementation (the Phase 1a
 
 ## 2. Problem Formulation
 
-Let `u(t) = t` and `v(t) = e^(M|t|)·sin(0.3t)`. The equations decompose exactly as:
+Let $u(t) = t$ and $v(t) = e^(M|t|)·sin(0.3t)$. The equations decompose exactly as:
 
 ```
 x = u·cosθ − v·sinθ + X
